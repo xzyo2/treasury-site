@@ -38,13 +38,20 @@
             </div>
 
             <div class="list-header">
-                <h3>Latest Transactions</h3>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <h3>Latest Transactions</h3>
+                    <button class="filter-icon" onclick="toggleFilterMenu()" title="Filter by Date">📅</button>
+                </div>
                 <span id="transCount" style="font-size: 0.8rem; opacity: 0.7">Loading...</span>
             </div>
 
-            <div id="transList" class="transaction-list">
-                </div>
+            <div id="filterMenu" class="filter-menu hidden">
+                <button onclick="applyFilter('all')" id="filter-all" class="filter-chip active">All Time</button>
+                <button onclick="applyFilter('month')" id="filter-month" class="filter-chip">This Month</button>
+                <button onclick="applyFilter('week')" id="filter-week" class="filter-chip">This Week</button>
+            </div>
 
+            <div id="transList" class="transaction-list"></div>
             <button id="loadMoreBtn" class="load-more" onclick="loadMore()">View More History</button>
         </div>
 
@@ -71,22 +78,17 @@
             <span class="close-btn" onclick="closeModal('transModal')">&times;</span>
             <h2 id="modalTitle">New Transaction</h2>
             <input type="hidden" id="editId">
-            
             <label>Date</label>
             <input type="date" id="tDate">
-            
             <label>Description</label>
             <input type="text" id="tDesc" placeholder="What was this for?">
-            
             <label>Type</label>
             <div class="toggle-group">
                 <button id="btnIncome" class="type-btn active" onclick="setTransType('income')">Income</button>
                 <button id="btnExpense" class="type-btn" onclick="setTransType('expense')">Expense</button>
             </div>
-            
             <label>Amount (PHP)</label>
             <input type="number" id="tAmount" placeholder="0.00">
-
             <button class="primary-btn" onclick="submitTransaction()">Save Transaction</button>
             <button id="deleteBtn" class="delete-btn hidden" onclick="deleteTransaction()">Delete Record</button>
         </div>
