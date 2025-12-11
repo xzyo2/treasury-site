@@ -1,5 +1,5 @@
 // --- CONFIGURATION ---
-const SUPABASE_URL = 'https://tokedafadxogunwwetef.supabase.co';
+const SUPABASE_URL = 'https://tokedafadxogunwwetef.supabase.co'; // hello there user
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRva2VkYWZhZHhvZ3Vud3dldGVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0Mzc4NTUsImV4cCI6MjA4MTAxMzg1NX0.HBS6hfKXt2g3oplwYoCg2t7qjqFyDMJvEmtlvgJSb3c';
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -9,19 +9,47 @@ let currentPage = 0;
 let isAdminMode = false;
 let selectedType = 'income';
 let displayedBalance = 0;
-// NEW: Filter State
 let currentFilter = 'all'; 
 
 document.addEventListener('DOMContentLoaded', () => {
     fetchTransactions();
     setupRealtime(); 
     checkLoginSession();
+    updateSortIcon(); // Set correct icon on load
     
     const dateInput = document.getElementById('tDate');
     if(dateInput) dateInput.valueAsDate = new Date();
 });
 
-// --- DATA FETCHING (Now with Filters!) ---
+// --- THEME & ICONS (NEW!) ---
+function toggleTheme() {
+    const body = document.body;
+    
+    // Toggle the class
+    if (body.classList.contains('dark-mode')) {
+        body.classList.remove('dark-mode');
+        body.classList.add('light-mode');
+    } else {
+        body.classList.remove('light-mode');
+        body.classList.add('dark-mode');
+    }
+    
+    updateSortIcon();
+}
+
+function updateSortIcon() {
+    const icon = document.getElementById('sortIcon');
+    const isDark = document.body.classList.contains('dark-mode');
+    
+    // Dark Mode = sortdm.png | Light Mode = sortwm.png
+    if (isDark) {
+        icon.src = "img/sortdm.png";
+    } else {
+        icon.src = "img/sortwm.png";
+    }
+}
+
+// --- DATA FETCHING ---
 async function fetchTransactions(isLoadMore = false) {
     if (!isLoadMore) { 
         currentPage = 0; 
@@ -31,14 +59,12 @@ async function fetchTransactions(isLoadMore = false) {
     const from = currentPage * 10;
     const to = from + 9;
 
-    // Start building the query
     let query = client
         .from('transactions')
         .select('*', { count: 'exact' })
         .order('date', { ascending: false })
         .order('id', { ascending: false });
 
-    // APPLY FILTER LOGIC
     if (currentFilter === 'month') {
         const date = new Date();
         const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).toISOString();
@@ -46,14 +72,12 @@ async function fetchTransactions(isLoadMore = false) {
     } 
     else if (currentFilter === 'week') {
         const date = new Date();
-        // Calculate start of the week (Sunday)
         const day = date.getDay();
         const diff = date.getDate() - day;
         const firstDay = new Date(date.setDate(diff)).toISOString();
         query = query.gte('date', firstDay);
     }
 
-    // Apply range for pagination
     const { data, error, count } = await query.range(from, to);
 
     if (error) {
@@ -63,8 +87,6 @@ async function fetchTransactions(isLoadMore = false) {
 
     transactions = isLoadMore ? [...transactions, ...data] : data;
     data.forEach(t => renderCard(t));
-    
-    // Always calculate TOTAL balance regardless of filter
     calculateBalance();
     
     if(document.getElementById('transCount')) {
@@ -77,7 +99,7 @@ async function fetchTransactions(isLoadMore = false) {
     }
 }
 
-// --- FILTER UI FUNCTIONS ---
+// --- FILTER UI ---
 function toggleFilterMenu() {
     const menu = document.getElementById('filterMenu');
     menu.classList.toggle('hidden');
@@ -85,12 +107,8 @@ function toggleFilterMenu() {
 
 function applyFilter(type) {
     currentFilter = type;
-    
-    // Update visual "Active" state of chips
     document.querySelectorAll('.filter-chip').forEach(btn => btn.classList.remove('active'));
     document.getElementById(`filter-${type}`).classList.add('active');
-    
-    // Refresh the list with the new filter
     fetchTransactions(false);
 }
 
@@ -186,7 +204,6 @@ function setupRealtime() {
 }
 
 async function calculateBalance() {
-    // Balance always calculates based on TOTAL history, ignoring filters
     const { data } = await client.from('transactions').select('amount, type');
     let total = 0;
     if(data) {
