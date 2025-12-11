@@ -3,17 +3,20 @@ const SUPABASE_URL = 'https://tokedafadxogunwwetef.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRva2VkYWZhZHhvZ3Vud3dldGVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0Mzc4NTUsImV4cCI6MjA4MTAxMzg1NX0.HBS6hfKXt2g3oplwYoCg2t7qjqFyDMJvEmtlvgJSb3c';
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-
 // --- STATE VARIABLES ---
 let transactions = [];
 let currentPage = 0;
 let isAdminMode = false;
 let selectedType = 'income';
 
+// NEW: Animation Memory
+let currentBalance = 0;      // The actual money we have
+let displayedBalance = 0;    // The number currently shown on screen
+
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
     fetchTransactions();
-    setupRealtime(); // Start listening immediately
+    setupRealtime(); 
     checkLoginSession();
     
     const dateInput = document.getElementById('tDate');
@@ -44,7 +47,7 @@ async function fetchTransactions(isLoadMore = false) {
 
     transactions = isLoadMore ? [...transactions, ...data] : data;
     data.forEach(t => renderCard(t));
-    calculateBalance();
+    calculateBalance(); // This will now trigger the animation
     
     if(document.getElementById('transCount')) {
         document.getElementById('transCount').innerText = `${count} records`;
@@ -79,8 +82,7 @@ function renderCard(t) {
     list.appendChild(card);
 }
 
-// --- SECURE DB ACTIONS (Server-Side) ---
-
+// --- SECURE DB ACTIONS ---
 async function submitTransaction() {
     const id = document.getElementById('editId').value;
     const date = document.getElementById('tDate').value;
@@ -113,7 +115,6 @@ async function submitTransaction() {
         if (result.success) {
             showToast("Success! Waiting for update...");
             closeModal('transModal');
-            // We DO NOT fetch here. We wait for Realtime to trigger it.
         } else {
             showToast("Error: " + (result.message || result.error));
         }
@@ -141,7 +142,6 @@ async function deleteTransaction() {
         if (result.success) {
             showToast("Deleted. Waiting for update...");
             closeModal('transModal');
-            // We DO NOT fetch here. We wait for Realtime to trigger it.
         } else {
             showToast("Error deleting: " + result.message);
         }
@@ -150,28 +150,67 @@ async function deleteTransaction() {
     }
 }
 
-// --- REALTIME LISTENER (The Important Part) ---
+// --- REALTIME LISTENER ---
 function setupRealtime() {
-    // 1. Subscribe to the 'transactions' table
     const channel = client.channel('public:transactions')
     .on(
         'postgres_changes', 
         { event: '*', schema: 'public', table: 'transactions' }, 
         (payload) => {
             console.log('Database changed!', payload);
-            // 2. When the DB says "I changed", we reload the list
             fetchTransactions(); 
         }
     )
-    .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-            console.log('Realtime connection active!');
-        }
-    });
+    .subscribe();
 }
 
-// --- ADMIN & UI LOGIC ---
+// --- ANIMATION ENGINE (The New Part!) ---
 
+async function calculateBalance() {
+    const { data } = await client.from('transactions').select('amount, type');
+    let total = 0;
+    if(data) {
+        data.forEach(t => {
+            if(t.type === 'income') total += parseFloat(t.amount);
+            else total -= parseFloat(t.amount);
+        });
+    }
+
+    // Trigger the animation from "Old Balance" to "New Total"
+    animateValue(displayedBalance, total, 2000); 
+    
+    // Update our memory for next time
+    displayedBalance = total;
+}
+
+function animateValue(start, end, duration) {
+    if (start === end) return;
+    const element = document.getElementById("displayBalance");
+    let startTime = null;
+
+    function step(timestamp) {
+        if (!startTime) startTime = timestamp;
+        const progress = Math.min((timestamp - startTime) / duration, 1);
+        
+        // This math makes it slow down at the end (Ease Out Cubic)
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        
+        const current = start + (end - start) * easeOut;
+        element.innerHTML = current.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        if (progress < 1) {
+            window.requestAnimationFrame(step);
+        } else {
+            // Ensure it lands exactly on the final number
+            element.innerHTML = end.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+    }
+    
+    window.requestAnimationFrame(step);
+}
+
+
+// --- ADMIN & UI LOGIC ---
 function toggleAdminMode() {
     isAdminMode = !isAdminMode;
     const btn = document.getElementById('adminToggleBtn');
@@ -267,18 +306,6 @@ function checkLoginSession() {
     }
 }
 
-async function calculateBalance() {
-    const { data } = await client.from('transactions').select('amount, type');
-    let total = 0;
-    if(data) {
-        data.forEach(t => {
-            if(t.type === 'income') total += parseFloat(t.amount);
-            else total -= parseFloat(t.amount);
-        });
-    }
-    document.getElementById('displayBalance').innerText = total.toLocaleString('en-PH', { minimumFractionDigits: 2 });
-}
-
 function switchTab(id) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -290,7 +317,6 @@ function switchTab(id) {
     }
     
     document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
-    
     if(id === 'home') document.querySelector('button[onclick="switchTab(\'home\')"]')?.classList.add('active');
     if(id === 'be-heard') document.querySelector('button[onclick="switchTab(\'be-heard\')"]')?.classList.add('active');
 }
