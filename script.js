@@ -248,3 +248,13 @@ function checkLoginSession() {
         document.getElementById('adminToggleBtn').classList.add('hidden');
     }
 }
+
+// --- REALTIME LISTENER ---
+function setupRealtime() {
+    client.channel('custom-all-channel')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload) => {
+        // When a new transaction happens, refresh the data automatically
+        fetchTransactions();
+    })
+    .subscribe();
+}
