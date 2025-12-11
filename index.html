@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Council Treasury</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="dark-mode">
+
+    <nav>
+        <div class="logo">SC Treasury</div>
+        <div class="nav-links">
+            <button onclick="switchTab('home')">Funds</button>
+            <button onclick="switchTab('be-heard')">Be Heard</button>
+            <button id="confidentialBtn" class="hidden" onclick="switchTab('admin')">Confidential</button>
+            <button id="themeToggle">Light Mode</button>
+            <button id="loginBtn" onclick="openLogin()">Login</button>
+            <button id="logoutBtn" class="hidden" onclick="handleLogout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="home" class="section active">
+            <div class="balance-card">
+                <h3>Current Balance (PHP)</h3>
+                <div class="balance-amount">₱<span id="displayBalance">0.00</span></div>
+            </div>
+
+            <div class="history-container">
+                <h3>Transaction History</h3>
+                <table id="transTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transList"></tbody>
+                </table>
+                <button id="loadMoreBtn" onclick="loadMore()">Show more</button>
+            </div>
+        </div>
+
+        <div id="be-heard" class="section hidden">
+            <h2>Be Heard</h2>
+            <p>Students can suggest where funds should go next.</p>
+            </div>
+
+        <div id="admin" class="section hidden">
+            <h2>Confidential Admin Panel</h2>
+            <div class="admin-form">
+                <input type="date" id="tDate">
+                <input type="text" id="tDesc" placeholder="Description">
+                <select id="tType">
+                    <option value="income">Income (Add Fund)</option>
+                    <option value="expense">Expense (Use Fund)</option>
+                </select>
+                <input type="number" id="tAmount" placeholder="Amount">
+                <button onclick="addTransaction()">Submit Transaction</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeLogin()">&times;</span>
+            <h2>Admin Verification</h2>
+            <input type="text" id="adminUser" placeholder="Username">
+            <input type="password" id="adminPass" placeholder="Password">
+            <button onclick="attemptLogin()">Verify</button>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
