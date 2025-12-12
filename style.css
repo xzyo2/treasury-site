@@ -45,9 +45,38 @@ body {
 header {
     position: sticky; top: 0; z-index: 100; background: var(--bg);
     border-bottom: 1px solid var(--border); padding: 15px 20px;
-    display: flex; align-items: center; justify-content: space-between; /* Changed for better spacing */
+    display: flex; align-items: center; justify-content: space-between; 
 }
 .logo { font-weight: 800; font-size: 1.1rem; }
+
+/* NEW: Desktop Navigation Styles */
+.desktop-nav-middle {
+    display: flex;
+    gap: 10px;
+}
+
+.desktop-nav-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-sub);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 8px 16px;
+    transition: all 0.2s;
+    border-radius: 20px;
+}
+
+.desktop-nav-btn:hover {
+    color: var(--text);
+    background: rgba(125,125,125,0.1);
+}
+
+.desktop-nav-btn.active {
+    color: var(--primary);
+    background: rgba(59, 130, 246, 0.1);
+    font-weight: 700;
+}
 
 .header-right {
     display: flex; align-items: center; gap: 15px;
@@ -177,6 +206,10 @@ input[type="file"] {
 
 @media (max-width: 600px) {
     header { padding: 12px 15px; }
+    
+    /* HIDE Desktop Nav on Mobile */
+    .desktop-nav-middle { display: none; }
+
     .mobile-nav {
         display: flex; position: fixed; bottom: 0; left: 0; width: 100%;
         background: var(--bg); border-top: 1px solid var(--border);
@@ -186,7 +219,6 @@ input[type="file"] {
     .nav-btn { flex: 1; text-align: center; opacity: 0.6; border-bottom: none !important; margin: 0; font-size: 0.9rem; padding: 8px; background: transparent; color: var(--text); border: none; }
     .nav-btn.active { opacity: 1; font-weight: 700; transform: scale(1.05); color: var(--primary); }
     
-    /* FIX: Remove !important so .hidden class still works */
     .mobile-float-btn { 
         display: block; 
         position: fixed; bottom: 80px; right: 20px; 
