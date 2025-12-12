@@ -13,11 +13,11 @@
     <header>
         <div class="logo">SC Treasury</div>
         
-        <button id="themeBtn" onclick="toggleTheme()" title="Switch Theme">
-            <div class="theme-icon"></div>
-        </button>
+        <div class="header-right">
+            <button id="themeBtn" onclick="toggleTheme()" title="Switch Theme">
+                <div class="theme-icon"></div>
+            </button>
 
-        <div class="desktop-nav">
             <div class="header-actions">
                 <button id="loginBtn" onclick="openLogin()" title="Admin Login">
                     <img src="img/adminico.png" alt="Login" class="icon-img">
@@ -78,7 +78,6 @@
     </nav>
     
     <button id="adminToggleBtn" class="hidden special mobile-float-btn" onclick="toggleAdminMode()">Admin Mode: OFF</button>
-
 
     <div id="loginModal" class="modal">
         <div class="modal-box">
@@ -143,7 +142,8 @@
     </div>
 
     <div id="imageModal" class="modal image-viewer-modal" onclick="closeModal('imageModal')">
-        <div class="image-container" onclick="event.stopPropagation()"> <span class="close-icon-floating" onclick="closeModal('imageModal')">&times;</span>
+        <div class="image-container" onclick="event.stopPropagation()">
+            <span class="close-icon-floating" onclick="closeModal('imageModal')">&times;</span>
             <img id="fullReceiptImg" src="" alt="Receipt Proof">
         </div>
     </div>
