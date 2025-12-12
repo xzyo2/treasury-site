@@ -1,8 +1,9 @@
 // --- CONFIGURATION ---
 const SUPABASE_URL = 'https://tokedafadxogunwwetef.supabase.co'; // hello there user
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRva2VkYWZhZHhvZ3Vud3dldGVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0Mzc4NTUsImV4cCI6MjA4MTAxMzg1NX0.HBS6hfKXt2g3oplwYoCg2t7qjqFyDMJvEmtlvgJSb3c';
-const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // --- STATE ---
 let transactions = [];
@@ -12,6 +13,7 @@ let selectedType = 'income';
 let displayedBalance = 0;
 let currentFilter = 'all'; 
 
+// --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
     fetchTransactions();
     setupRealtime(); 
@@ -22,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if(dateInput) dateInput.valueAsDate = new Date();
 });
 
-// --- THEME ---
+// --- THEME FUNCTIONS ---
 function toggleTheme() {
     document.body.classList.toggle('dark-mode');
     document.body.classList.toggle('light-mode');
@@ -32,7 +34,6 @@ function toggleTheme() {
 function updateSortIcon() {
     const icon = document.getElementById('sortIcon');
     const isDark = document.body.classList.contains('dark-mode');
-    // Ensure you have these images in your img/ folder!
     if (icon) {
         icon.src = isDark ? "img/sortdm.png" : "img/sortwm.png";
     }
@@ -53,6 +54,7 @@ async function fetchTransactions(isLoadMore = false) {
         .order('date', { ascending: false })
         .order('id', { ascending: false });
 
+    // Filter Logic
     if (currentFilter === 'month') {
         const date = new Date();
         const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).toISOString();
@@ -75,6 +77,7 @@ async function fetchTransactions(isLoadMore = false) {
     data.forEach(t => renderCard(t));
     calculateBalance();
     
+    // UI Updates
     if(document.getElementById('transCount')) {
         document.getElementById('transCount').innerText = `${count} records`;
     }
@@ -91,13 +94,13 @@ function renderCard(t) {
     const isIncome = t.type === 'income';
     const amountFmt = parseFloat(t.amount).toLocaleString('en-PH', { minimumFractionDigits: 2 });
 
-    // 1. Receipt Badge
+    // Receipt Badge Logic
     let receiptBadge = '';
     if (t.receipt_url) {
         receiptBadge = `<a href="${t.receipt_url}" target="_blank" class="receipt-badge">VIEW RECEIPT</a>`;
     }
 
-    // 2. Warning Text
+    // Warning Text Logic
     let warningText = '';
     if (!t.receipt_url) {
         warningText = `<small class="no-receipt-text">Note: No receipt image attached. (Transaction verified manually)</small>`;
@@ -105,6 +108,7 @@ function renderCard(t) {
 
     const card = document.createElement('div');
     card.className = 'trans-card';
+    // Using HTML Entity &#8369; for Peso sign to prevent syntax errors
     card.innerHTML = `
         <div class="t-left">
             <span class="t-id">#${t.id}</span>
@@ -117,7 +121,7 @@ function renderCard(t) {
         </div>
         <div class="t-right">
             <span class="t-amount ${isIncome ? 'income' : 'expense'}">
-                ${isIncome ? '+' : '-'}₱${amountFmt}
+                ${isIncome ? '+' : '-'} &#8369;${amountFmt}
             </span>
             <button class="edit-icon" onclick="openEditModal(${t.id})">✎</button>
         </div>
@@ -133,9 +137,8 @@ async function submitTransaction() {
     const amount = document.getElementById('tAmount').value;
     const password = document.getElementById('adminPass').value; 
     
-    // File Handling
     const fileInput = document.getElementById('tReceipt');
-    const file = fileInput.files[0];
+    const file = fileInput ? fileInput.files[0] : null;
 
     if (!desc || !amount) return showToast("Please fill all fields");
     if (!password) return showToast("Please login again to save");
@@ -144,7 +147,7 @@ async function submitTransaction() {
 
     let finalReceiptUrl = null;
 
-    // Upload Image if present
+    // Upload Image
     if (file) {
         const fileName = `${Date.now()}_${file.name.replace(/\s/g, '_')}`;
         const { error: uploadError } = await client.storage.from('receipts').upload(fileName, file);
@@ -158,15 +161,19 @@ async function submitTransaction() {
         finalReceiptUrl = urlData.publicUrl;
     }
 
-    // Payload
+    // Construct Payload
     const payload = { 
         id: id ? id : undefined, 
         date, 
         description: desc, 
         type: selectedType, 
-        amount,
-        ...(finalReceiptUrl && { receipt_url: finalReceiptUrl }) 
+        amount
     };
+    
+    // Only add receipt_url if a new image was uploaded
+    if (finalReceiptUrl) {
+        payload.receipt_url = finalReceiptUrl;
+    }
 
     const action = id ? 'update' : 'create';
 
@@ -180,5 +187,255 @@ async function submitTransaction() {
         const result = await res.json();
 
         if (result.success) {
-            showToast("Success
+            showToast("Success! Waiting for update...");
+            closeModal('transModal');
+            if (fileInput) fileInput.value = ""; 
+            if(document.getElementById('fileName')) {
+                document.getElementById('fileName').innerText = "Tap to upload image...";
+            }
+        } else {
+            showToast("Error: " + (result.message || result.error));
+        }
+    } catch (e) {
+        console.error(e);
+        showToast("Server Connection Failed");
+    }
+}
 
+// --- DELETE TRANSACTION ---
+async function deleteTransaction() {
+    const id = document.getElementById('editId').value;
+    const password = document.getElementById('adminPass').value;
+    
+    if(!confirm("Delete this record?")) return;
+    if (!password) return showToast("Please login again");
+
+    try {
+        const res = await fetch('/api/transaction', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete', payload: { id }, password })
+        });
+
+        const result = await res.json();
+        if (result.success) {
+            showToast("Deleted. Waiting for update...");
+            closeModal('transModal');
+        } else {
+            showToast("Error deleting");
+        }
+    } catch (e) {
+        showToast("Server Error");
+    }
+}
+
+// --- REALTIME ---
+function setupRealtime() {
+    client.channel('public:transactions')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
+            fetchTransactions(); 
+        })
+        .subscribe();
+}
+
+// --- BALANCE ANIMATION ---
+async function calculateBalance() {
+    const { data } = await client.from('transactions').select('amount, type');
+    let total = 0;
+    if(data) {
+        data.forEach(t => {
+            if(t.type === 'income') total += parseFloat(t.amount);
+            else total -= parseFloat(t.amount);
+        });
+    }
+    animateValue(displayedBalance, total, 2000); 
+    displayedBalance = total;
+}
+
+function animateValue(start, end, duration) {
+    if (start === end) return;
+    const el = document.getElementById("displayBalance");
+    if (!el) return;
+    
+    let startTime = null;
+    function step(ts) {
+        if (!startTime) startTime = ts;
+        const progress = Math.min((ts - startTime) / duration, 1);
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        const current = start + (end - start) * easeOut;
+        el.innerHTML = current.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (progress < 1) requestAnimationFrame(step);
+        else el.innerHTML = end.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    requestAnimationFrame(step);
+}
+
+// --- UI UTILS ---
+function toggleAdminMode() {
+    isAdminMode = !isAdminMode;
+    const btn = document.getElementById('adminToggleBtn');
+    const list = document.getElementById('transList');
+    const controls = document.getElementById('adminControls');
+    
+    if (isAdminMode) {
+        btn.innerText = "Admin Mode: ON";
+        btn.style.color = "#22c55e";
+        list.classList.add('admin-mode');
+        if(controls) controls.classList.remove('hidden');
+    } else {
+        btn.innerText = "Admin Mode: OFF";
+        btn.style.color = "#eab308";
+        list.classList.remove('admin-mode');
+        if(controls) controls.classList.add('hidden');
+    }
+}
+
+async function downloadBackup() {
+    if(!confirm("Download backup?")) return;
+    const { data, error } = await client.from('transactions').select('*').order('id', { ascending: true });
+    
+    if (error) return showToast("Backup failed.");
+    
+    // Explicit newline character \n for CSV safety
+    let csv = "ID,Date,Description,Type,Amount,ReceiptURL,Created At\n";
+    data.forEach(row => {
+        const cleanDesc = row.description ? row.description.replace(/"/g, '""') : ""; 
+        const rUrl = row.receipt_url || '';
+        csv += `${row.id},${row.date},"${cleanDesc}",${row.type},${row.amount},${rUrl},${row.created_at}\n`;
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `SHS_Backup_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    showToast("Backup Downloaded! 📂");
+}
+
+function openTransactionModal() {
+    document.getElementById('modalTitle').innerText = "New Transaction";
+    document.getElementById('editId').value = "";
+    document.getElementById('tDesc').value = "";
+    document.getElementById('tAmount').value = "";
+    document.getElementById('tReceipt').value = ""; 
+    if(document.getElementById('fileName')) {
+        document.getElementById('fileName').innerText = "Tap to upload image...";
+    }
+    document.getElementById('deleteBtn').classList.add('hidden');
+    setTransType('income');
+    document.getElementById('transModal').style.display = 'flex';
+}
+
+function openEditModal(id) {
+    const t = transactions.find(x => x.id === id);
+    if(!t) return;
+    
+    document.getElementById('modalTitle').innerText = `Edit Transaction #${id}`;
+    document.getElementById('editId').value = id;
+    document.getElementById('tDate').value = t.date;
+    document.getElementById('tDesc').value = t.description;
+    document.getElementById('tAmount').value = t.amount;
+    
+    if(document.getElementById('fileName')) {
+        document.getElementById('fileName').innerText = t.receipt_url ? "Replace existing image..." : "Upload image...";
+    }
+    
+    document.getElementById('deleteBtn').classList.remove('hidden');
+    setTransType(t.type);
+    document.getElementById('transModal').style.display = 'flex';
+}
+
+function setTransType(type) {
+    selectedType = type;
+    document.getElementById('btnIncome').className = `type-btn ${type === 'income' ? 'active' : ''}`;
+    document.getElementById('btnExpense').className = `type-btn ${type === 'expense' ? 'active' : ''}`;
+}
+
+// File name helper
+const receiptInput = document.getElementById('tReceipt');
+if (receiptInput) {
+    receiptInput.addEventListener('change', function(){
+        if(this.files && this.files[0]) {
+            document.getElementById('fileName').innerText = this.files[0].name;
+        }
+    });
+}
+
+// Auth & Tabs
+async function attemptLogin() {
+    const u = document.getElementById('adminUser').value;
+    const p = document.getElementById('adminPass').value;
+    
+    try {
+        const res = await fetch('/api/auth', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ user: u, pass: p })
+        });
+        const data = await res.json();
+        
+        if(data.success) {
+            localStorage.setItem('sc_admin', 'true');
+            checkLoginSession();
+            closeModal('loginModal');
+            showToast("Welcome Treasurer");
+            if(!isAdminMode) toggleAdminMode();
+        } else {
+            showToast("Wrong password");
+        }
+    } catch(e) { showToast("Server Error"); }
+}
+
+function handleLogout() {
+    localStorage.removeItem('sc_admin');
+    checkLoginSession();
+    if(isAdminMode) toggleAdminMode();
+    document.getElementById('adminPass').value = ""; 
+    showToast("Logged out");
+}
+
+function checkLoginSession() {
+    const isLogged = localStorage.getItem('sc_admin') === 'true';
+    if(isLogged) {
+        document.getElementById('loginBtn').classList.add('hidden');
+        document.getElementById('logoutBtn').classList.remove('hidden');
+        document.getElementById('adminToggleBtn').classList.remove('hidden');
+    } else {
+        document.getElementById('loginBtn').classList.remove('hidden');
+        document.getElementById('logoutBtn').classList.add('hidden');
+        document.getElementById('adminToggleBtn').classList.add('hidden');
+    }
+}
+
+function switchTab(id) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.getElementById(id).classList.remove('hidden');
+    document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+    
+    if(id === 'home') document.querySelectorAll('button[onclick="switchTab(\'home\')"]').forEach(b => b.classList.add('active'));
+    if(id === 'be-heard') document.querySelectorAll('button[onclick="switchTab(\'be-heard\')"]').forEach(b => b.classList.add('active'));
+}
+
+function toggleFilterMenu() { 
+    document.getElementById('filterMenu').classList.toggle('hidden'); 
+}
+
+function applyFilter(type) {
+    currentFilter = type;
+    document.querySelectorAll('.filter-chip').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`filter-${type}`).classList.add('active');
+    fetchTransactions(false);
+}
+
+function openLogin() { document.getElementById('loginModal').style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function loadMore() { currentPage++; fetchTransactions(true); }
+
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    if(t) { 
+        t.innerText = msg; 
+        t.classList.add('show'); 
+        setTimeout(() => t.classList.remove('show'), 3000); 
+    }
+}
