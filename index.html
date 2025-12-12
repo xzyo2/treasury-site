@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Student Council Treasury</title>
+    <title>Student Council Funds</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
@@ -12,6 +12,7 @@
 
     <header>
         <div class="logo">SC Treasury</div>
+        
         <button id="themeBtn" onclick="toggleTheme()" title="Switch Theme">
             <div class="theme-icon"></div>
         </button>
@@ -113,7 +114,10 @@
             <label>Receipt Proof (Optional)</label>
             <div class="file-upload-box">
                 <input type="file" id="tReceipt" accept="image/*">
-                <span id="fileName">Tap to upload image...</span>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <span id="fileName">Tap to upload image...</span>
+                    <button id="clearFileBtn" class="hidden" onclick="clearFileSelection(event)" style="background:none; border:none; cursor:pointer; font-size: 1.2rem;">❌</button>
+                </div>
             </div>
 
             <button class="primary-btn" onclick="submitTransaction()">Save Transaction</button>
