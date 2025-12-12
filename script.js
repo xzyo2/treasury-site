@@ -446,7 +446,11 @@ function checkLoginSession() {
 function switchTab(id) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
     document.getElementById(id).classList.remove('hidden');
-    document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+    
+    // NEW: Remove active class from BOTH desktop and mobile buttons
+    document.querySelectorAll('.nav-btn, .desktop-nav-btn').forEach(el => el.classList.remove('active'));
+    
+    // NEW: Highlight the clicked tab (works for both since we select by onclick attribute)
     if(id === 'home') document.querySelectorAll('button[onclick="switchTab(\'home\')"]').forEach(b => b.classList.add('active'));
     if(id === 'be-heard') document.querySelectorAll('button[onclick="switchTab(\'be-heard\')"]').forEach(b => b.classList.add('active'));
 }
