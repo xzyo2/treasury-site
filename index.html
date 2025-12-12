@@ -128,7 +128,7 @@
                     <input type="file" id="tReceipt" accept="image/*">
                     <div class="file-content">
                         <span id="fileName">Tap to upload image...</span>
-                        <button id="clearFileBtn" class="hidden remove-file-btn" onclick="clearFileSelection(event)">
+                        <button id="clearFileBtn" class="hidden remove-file-btn" type="button" onclick="clearFileSelection(event)">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
                               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                             </svg>
@@ -139,6 +139,12 @@
 
             <button id="saveTxBtn" class="primary-btn" onclick="submitTransaction()">Save Transaction</button>
             <button id="deleteBtn" class="delete-btn hidden" onclick="deleteTransaction()">Delete Record</button>
+        </div>
+    </div>
+
+    <div id="imageModal" class="modal image-viewer-modal" onclick="closeModal('imageModal')">
+        <div class="image-container" onclick="event.stopPropagation()"> <span class="close-icon-floating" onclick="closeModal('imageModal')">&times;</span>
+            <img id="fullReceiptImg" src="" alt="Receipt Proof">
         </div>
     </div>
 
